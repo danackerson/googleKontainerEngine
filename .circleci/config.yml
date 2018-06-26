@@ -1,0 +1,32 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: google/cloud-sdk:alpine
+    steps:
+      - run:
+          name: Store Service Account
+          command: echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
+      - run: |
+             gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
+             gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+             gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+
+             gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
+             --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
+             --cluster-version "1.10.4-gke.2" --machine-type "f1-micro" \
+             --image-type "COS" --disk-type "pd-standard" --preemptible \
+             --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
+             --num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
+             --subnetwork "default" --enable-autoupgrade --enable-autorepair \
+             --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
+
+             gcloud --quiet container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
+             gcloud --quiet components install kubectl
+
+             # allows deployment of our docker hub images directly from K8S cluster
+             kubectl create secret docker-registry regcred \
+             --docker-server=https://index.docker.io/v1/ \
+             --docker-username=$DOCKER_USERNAME \
+             --docker-password=$DOCKER_PASSWD \
+             --docker-email=$DOCKER_EMAIL

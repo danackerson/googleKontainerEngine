@@ -13,18 +13,17 @@ jobs:
              gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
              gcloud --quiet components install kubectl
 
-             gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
-             --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
-             --cluster-version "1.10.4-gke.2" --machine-type "f1-micro" \
-             --image-type "COS" --disk-type "pd-standard" --preemptible \
-             --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
-             --num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
-             --subnetwork "default" --enable-autoupgrade --enable-autorepair \
-             --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
+             #gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
+             #--region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
+             #--cluster-version "1.10.4-gke.2" --machine-type "f1-micro" \
+             #--image-type "COS" --disk-type "pd-standard" --preemptible \
+             #--service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
+             #--num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
+             #--subnetwork "default" --enable-autoupgrade --enable-autorepair \
+             #--addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
 
-             gcloud --quiet container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
-             gcloud iam list-testable-permissions ${GOOGLE_PROJECT_ID}
-             
+             gcloud --quiet beta container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
+
              # allows deployment of our docker hub images directly from K8S cluster
              kubectl create secret docker-registry regcred \
              --docker-server=https://index.docker.io/v1/ \

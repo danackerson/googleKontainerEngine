@@ -23,7 +23,8 @@ jobs:
              --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
 
              gcloud --quiet container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
-
+             gcloud iam list-testable-permissions ${GOOGLE_PROJECT_ID}
+             
              # allows deployment of our docker hub images directly from K8S cluster
              kubectl create secret docker-registry regcred \
              --docker-server=https://index.docker.io/v1/ \

@@ -25,6 +25,7 @@ jobs:
              gcloud --quiet beta container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
 
              # allows deployment of our docker hub images directly from K8S cluster
+             # must be deleted if you are using gcr.io instead!
              kubectl create secret docker-registry regcred \
              --docker-server=https://index.docker.io/v1/ \
              --docker-username=$DOCKER_USERNAME \

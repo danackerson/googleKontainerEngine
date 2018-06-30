@@ -31,3 +31,6 @@ jobs:
              --docker-username=$DOCKER_USERNAME \
              --docker-password=$DOCKER_PASSWD \
              --docker-email=$DOCKER_EMAIL
+
+             # setup the Ingress router, domains and SSL
+             kubectl replace -f deploy.yaml || kubectl create -f deploy.yaml || true

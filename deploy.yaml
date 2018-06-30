@@ -1,0 +1,18 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: websites
+spec:
+  rules:
+  - host: ackerson.de
+    http:
+      paths:
+      - backend:
+          serviceName: homepage-deploy-service
+          servicePort: 80
+#  - host: battlefleet.online
+#    http:
+#      paths:
+#      - backend:
+#          serviceName: battlefleet-deploy-service
+#          servicePort: 80

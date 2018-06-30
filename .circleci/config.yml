@@ -4,6 +4,7 @@ jobs:
     docker:
       - image: google/cloud-sdk:alpine
     steps:
+      - checkout
       - run:
           name: Store Service Account
           command: echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json

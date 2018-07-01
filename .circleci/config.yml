@@ -19,17 +19,15 @@ jobs:
              gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
              gcloud --quiet components install kubectl beta
 
-             gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
-             --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
-             --cluster-version "1.10.5-gke.0" --machine-type "f1-micro" \
-             --image-type "COS" --disk-type "pd-standard" --preemptible \
-             --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
-             --num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
-             --subnetwork "default" --enable-autoupgrade --enable-autorepair \
-             --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
-             gcloud --quiet compute addresses create globalhomepage --global
-             #setup the static IP
-
+             # gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
+             # --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
+             # --cluster-version "1.10.5-gke.0" --machine-type "f1-micro" \
+             # --image-type "COS" --disk-type "pd-standard" --preemptible \
+             # --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
+             # --num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
+             # --subnetwork "default" --enable-autoupgrade --enable-autorepair \
+             # --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
+             
              gcloud --quiet beta container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
 
              # allows deployment of our docker hub images directly from K8S cluster

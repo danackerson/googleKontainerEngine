@@ -4,6 +4,7 @@ metadata:
   name: websites
   annotations:
     kubernetes.io/ingress.global-static-ip-name: globalhomepage
+    # found: https://console.cloud.google.com/networking/addresses/list?project=kubernetes-207013&organizationId=797100582747
 spec:
   rules:
   - host: ackerson.de

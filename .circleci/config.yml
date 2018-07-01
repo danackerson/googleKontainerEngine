@@ -39,7 +39,7 @@ jobs:
              --docker-password=$DOCKER_PASSWD \
              --docker-email=$DOCKER_EMAIL
 
-             # setup the Ingress router, domains and SSL
+             # setup the Ingress router
              kubectl apply -f deploy.yaml
 
       - run:
@@ -47,6 +47,7 @@ jobs:
           command: |
             gcloud auth activate-service-account --key-file=${HOME}/dns01-provider-key.json
 
+            kubectl apply -f cert-manager.yaml
             kubectl delete secret dns01-provider-key || true
             kubectl create secret generic dns01-provider-key --from-file=${HOME}/dns01-provider-key.json
             kubectl apply -f dns01-provider.yaml

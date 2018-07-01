@@ -1,0 +1,50 @@
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Issuer
+metadata:
+  name: letsencrypt
+  namespace: default
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: dan@ackerson.de
+
+    # Name of a secret used to store the ACME account private key
+    privateKeySecretRef:
+      name: letsencrypt
+
+    # ACME DNS-01 provider configurations
+    dns01:
+      providers:
+        - name: prod-dns
+          clouddns:
+            # A secretKeyRef to a google cloud json service account
+            serviceAccountSecretRef:
+              name: clouddns-service-account
+              key: dns01-provider-key
+            # The project in which to update the DNS zone
+            project: kubernetes-207013
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: ackerson-de
+  namespace: default
+spec:
+  secretName: ackerson-de-tls
+  issuerRef:
+    name: letsencrypt
+  commonName: '*.gackerson.de'
+  dnsNames:
+  - gackerson.de
+  - gbattlefleet.online
+  acme:
+    config:
+    - dns01:
+        provider: prod-dns
+      domains:
+      - '*.gackerson.de'
+      - gackerson.de
+    - dns01:
+        provider: prod-dns
+      domains:
+      - gbattlefleet.online

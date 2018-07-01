@@ -6,33 +6,45 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Store Service Account
-          command: echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
-      - run: |
+          name: Store Service Accounts
+          command: |
+            echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
+            echo $GCLOUD_DNS01_SERVICE_KEY > ${HOME}/dns01-provider-key.json
+
+      - run:
+          name: Setup Cluster and Ingress
+          command: |
              gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
              gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
              gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
              gcloud --quiet components install kubectl
 
-             # gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
-             # --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
-             # --cluster-version "1.10.5-gke.0" --machine-type "f1-micro" \
-             # --image-type "COS" --disk-type "pd-standard" --preemptible \
-             # --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
-             # --num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
-             # --subnetwork "default" --enable-autoupgrade --enable-autorepair \
-             # --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
+             gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
+             --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
+             --cluster-version "1.10.5-gke.0" --machine-type "f1-micro" \
+             --image-type "COS" --disk-type "pd-standard" --preemptible \
+             --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
+             --num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
+             --subnetwork "default" --enable-autoupgrade --enable-autorepair \
+             --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
 
              gcloud --quiet beta container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
 
              # allows deployment of our docker hub images directly from K8S cluster
              # must be deleted if you are using gcr.io instead!
-             kubectl delete secret docker-registry dockerhub-creds || true
-             kubectl create secret docker-registry dockerhub-creds \
+             kubectl apply secret docker-registry dockerhub-creds \
              --docker-server=https://index.docker.io/v1/ \
              --docker-username=$DOCKER_USERNAME \
              --docker-password=$DOCKER_PASSWD \
              --docker-email=$DOCKER_EMAIL
 
              # setup the Ingress router, domains and SSL
-             kubectl replace -f deploy.yaml || kubectl create -f deploy.yaml || true
+             kubectl apply -f deploy.yaml
+
+      - run:
+          name: Setup SSL certificates
+          command: |
+            gcloud auth activate-service-account --key-file=${HOME}/dns01-provider-key.json
+
+            kubectl apply secret generic dns01-provider-key --from-file=${HOME}/dns01-provider-key.json
+            kubectl apply -f dns01-provider.yaml

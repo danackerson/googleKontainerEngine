@@ -32,7 +32,7 @@ jobs:
 
              # allows deployment of our docker hub images directly from K8S cluster
              # must be deleted if you are using gcr.io instead!
-             kubectl delete secret docker-registry dockerhub-creds || true
+             kubectl delete secret dockerhub-creds || true
              kubectl create secret docker-registry dockerhub-creds \
              --docker-server=https://index.docker.io/v1/ \
              --docker-username=$DOCKER_USERNAME \
@@ -47,6 +47,6 @@ jobs:
           command: |
             gcloud auth activate-service-account --key-file=${HOME}/dns01-provider-key.json
 
-            kubectl delete secret generic dns01-provider-key || true
+            kubectl delete secret dns01-provider-key || true
             kubectl create secret generic dns01-provider-key --from-file=${HOME}/dns01-provider-key.json
             kubectl apply -f dns01-provider.yaml

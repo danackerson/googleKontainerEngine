@@ -80,7 +80,7 @@ spec:
         release: cert-manager
       annotations:
     spec:
-      #serviceAccountName: default
+      serviceAccountName: ""
       containers:
         - name: cert-manager
           image: "quay.io/jetstack/cert-manager-controller:v0.3.1"

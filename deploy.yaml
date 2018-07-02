@@ -3,8 +3,8 @@ kind: Ingress
 metadata:
   name: websites
   annotations:
-    kubernetes.io/ingress.global-static-ip-name: globalhomepage
-    # found: https://console.cloud.google.com/networking/addresses/list?project=kubernetes-207013&organizationId=797100582747
+    kubernetes.io/ingress.global-static-ip-name: globalhomepage # found: https://console.cloud.google.com/networking/addresses/list?project=kubernetes-207013
+    ingress.gcp.kubernetes.io/pre-shared-cert: ackersonde-ssl
 spec:
   rules:
   - host: ackerson.de
@@ -13,6 +13,7 @@ spec:
       - backend:
           serviceName: homepage-deploy-service
           servicePort: 80
+          servicePort: 443
 #  tls:
 #    - secretName: ackerson-de-tls
 #      hosts:

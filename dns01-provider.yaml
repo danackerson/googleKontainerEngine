@@ -18,8 +18,8 @@ spec:
           clouddns:
             # A secretKeyRef to a google cloud json service account
             serviceAccountSecretRef:
-              name: clouddns-service-account
-              key: dns01-provider-key
+              name: dns01-provider-key
+              key: dns01-provider-key.json
             # The project in which to update the DNS zone
             project: kubernetes-207013
 ---
@@ -32,11 +32,14 @@ spec:
   secretName: ackerson-de-tls
   issuerRef:
     name: letsencrypt
+  commonName: ackerson.de
   dnsNames:
   - ackerson.de
+  - www.ackerson.de
   acme:
     config:
     - dns01:
         provider: prod-dns
       domains:
       - ackerson.de
+      - www.ackerson.de

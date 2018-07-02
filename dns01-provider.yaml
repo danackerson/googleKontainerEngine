@@ -32,7 +32,6 @@ spec:
   secretName: ackerson-de-tls
   issuerRef:
     name: letsencrypt
-  commonName: '*.ackerson.de'
   dnsNames:
   - ackerson.de
   acme:
@@ -40,5 +39,4 @@ spec:
     - dns01:
         provider: prod-dns
       domains:
-      - '*.ackerson.de'
       - ackerson.de

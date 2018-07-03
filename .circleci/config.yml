@@ -39,37 +39,38 @@ jobs:
              --docker-password=$DOCKER_PASSWD \
              --docker-email=$DOCKER_EMAIL
 
-             # Ingress router
-             kubectl apply -f deploy.yaml
-
              # Setup SSL certs with cert-bot
-             apk add -U python2 augeas gcc python2-dev musl-dev libffi-dev openssl-dev py2-pip
-             cd /root/
-             wget https://github.com/certbot/certbot/archive/v0.25.1.tar.gz
-             tar -xzf ./v0.25.1.tar.gz
-             cd certbot-0.25.1
-             pip install ./
-             cd certbot-dns-google
-             python setup.py install
-             cd $HOME
+             # apk add -U python2 augeas gcc python2-dev musl-dev libffi-dev openssl-dev py2-pip
+             # cd /root/
+             # wget https://github.com/certbot/certbot/archive/v0.25.1.tar.gz
+             # tar -xzf ./v0.25.1.tar.gz
+             # cd certbot-0.25.1
+             # pip install ./
+             # cd certbot-dns-google
+             # python setup.py install
+             # cd $HOME
+             #
+             # chmod 600 $HOME/gcloud-service-key.json
+             # certbot certonly --email dan@ackerson.de --rsa-key-size 2048 \
+             #   --agree-tos --non-interactive \
+             #   --dns-google --dns-google-propagation-seconds 60 \
+             #   --dns-google-credentials $HOME/gcloud-service-key.json \
+             #   -d "ackerson.de, www.ackerson.de"
+             #
+             # kubectl create secret tls ackerson-de-tls \
+             #   --cert=/etc/letsencrypt/live/ackerson.de/fullchain.pem \
+             #   --key=/etc/letsencrypt/live/ackerson.de/privkey.pem
 
-             chmod 600 $HOME/gcloud-service-key.json
-             certbot certonly --email dan@ackerson.de --rsa-key-size 2048 \
-               --agree-tos --non-interactive \
-               --dns-google --dns-google-propagation-seconds 60 \
-               --dns-google-credentials $HOME/gcloud-service-key.json \
-               -d "ackerson.de, www.ackerson.de"
+      - run:
+          name: Setup SSL certificates & Ingress
+          command: |
+            gcloud auth activate-service-account --key-file=${HOME}/dns01-provider-key.json
 
-             gcloud compute ssl-certificates create ackersonde-ssl \
-               --certificate=/etc/letsencrypt/live/ackerson.de/fullchain.pem \
-               --private-key=/etc/letsencrypt/live/ackerson.de/privkey.pem
+            kubectl apply -f cert-manager.yaml
+            kubectl delete secret dns01-provider-key || true
+            kubectl create secret generic dns01-provider-key --from-file=${HOME}/dns01-provider-key.json
+            kubectl apply -f dns01-provider.yaml
 
-      # - run:
-      #     name: Setup SSL certificates & Ingress
-      #     command: |
-      #       #gcloud auth activate-service-account --key-file=${HOME}/dns01-provider-key.json
-      #
-      #       kubectl apply -f cert-manager.yaml
-      #       kubectl delete secret dns01-provider-key || true
-      #       kubectl create secret generic dns01-provider-key --from-file=${HOME}/dns01-provider-key.json
-      #       kubectl apply -f dns01-provider.yaml
+            # Switch back to standard account for creating the Ingress
+            gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
+            kubectl apply -f deploy.yaml

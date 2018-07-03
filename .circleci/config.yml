@@ -3,6 +3,7 @@ jobs:
   build:
     docker:
       - image: google/cloud-sdk:alpine
+    working_directory: ~/gke
     steps:
       - checkout
       - run:
@@ -11,7 +12,7 @@ jobs:
             echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
             chmod 600 $HOME/gcloud-service-key.json
             #echo $GCLOUD_DNS01_SERVICE_KEY > ${HOME}/dns01-provider-key.json
-
+            export=$(pwd)
       - run:
           name: Setup Cluster and Ingress
           command: |
@@ -56,7 +57,7 @@ jobs:
             cd $HOME
             certbot certonly --email dan@ackerson.de --rsa-key-size 2048 \
               --agree-tos --non-interactive \
-              --dns-google --dns-google-propagation-seconds 60 \
+              --dns-google --dns-google-propagation-seconds 70 \
               --dns-google-credentials $HOME/gcloud-service-key.json \
               -d "ackerson.de, www.ackerson.de"
 
@@ -68,13 +69,13 @@ jobs:
             # called globalhomepage & globalhomepage-ssl (used in ingress below)
 
             # Create the ingress (depends on TLS key above)
-            kubectl apply -f deploy.yaml
+            kubectl apply -f ~/gke/deploy.yaml
 
       # Maybe cert-manager gets a bit better in the future
       # - run:
       #     name: Setup SSL certificates & Ingress
       #     command: |
-      #       kubectl apply -f cert-manager.yaml --validate=false
+      #       kubectl apply -f ~/gke/cert-manager.yaml --validate=false
       #       kubectl delete secret dns01-provider-key || true
       #       kubectl create secret generic dns01-provider-key --from-file=${HOME}/dns01-provider-key.json
-      #       kubectl apply -f dns01-provider.yaml
+      #       kubectl apply -f ~/gke/dns01-provider.yaml

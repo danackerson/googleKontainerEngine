@@ -64,6 +64,9 @@ jobs:
               --cert=/etc/letsencrypt/live/ackerson.de/fullchain.pem \
               --key=/etc/letsencrypt/live/ackerson.de/privkey.pem
 
+            # TODO: create 2-4 reserved IP addys (ipv4 & ipv6)
+            # called globalhomepage & globalhomepage-ssl (used in ingress below)
+
             # Create the ingress (depends on TLS key above)
             kubectl apply -f deploy.yaml
 

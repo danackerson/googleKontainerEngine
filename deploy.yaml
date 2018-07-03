@@ -1,9 +1,9 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: websites
+  name: websites-ssl
   annotations:
-    kubernetes.io/ingress.global-static-ip-name: globalhomepage # found: https://console.cloud.google.com/networking/addresses/list?project=kubernetes-207013
+    kubernetes.io/ingress.global-static-ip-name: globalhomepage-ssl # found: https://console.cloud.google.com/networking/addresses/list?project=kubernetes-207013
     #ingress.gcp.kubernetes.io/pre-shared-cert: ackersonde-ssl
 spec:
   tls:
@@ -11,6 +11,21 @@ spec:
       hosts:
         - ackerson.de
         #- battlefleet.online
+  rules:
+  - host: ackerson.de
+    http:
+      paths:
+      - backend:
+          serviceName: homepage-deploy-service
+          servicePort: 80
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: websites
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: globalhomepage # found: https://console.cloud.google.com/networking/addresses/list?project=kubernetes-207013
+spec:
   rules:
   - host: ackerson.de
     http:

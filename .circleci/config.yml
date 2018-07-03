@@ -9,65 +9,69 @@ jobs:
           name: Store Service Accounts
           command: |
             echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
-            echo $GCLOUD_DNS01_SERVICE_KEY > ${HOME}/dns01-provider-key.json
+            chmod 600 $HOME/gcloud-service-key.json
+            #echo $GCLOUD_DNS01_SERVICE_KEY > ${HOME}/dns01-provider-key.json
 
       - run:
           name: Setup Cluster and Ingress
           command: |
-             gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
-             gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
-             gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
-             gcloud --quiet components install kubectl beta
+            gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
+            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+            gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+            gcloud --quiet components install kubectl beta
 
-             gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
-             --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
-             --cluster-version "1.10.5-gke.0" --machine-type "f1-micro" \
-             --image-type "COS" --disk-type "pd-standard" --preemptible \
-             --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
-             --num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
-             --subnetwork "default" --enable-autoupgrade --enable-autorepair \
-             --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
+            gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
+              --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
+              --cluster-version "1.10.5-gke.0" --machine-type "f1-micro" \
+              --image-type "COS" --disk-type "pd-standard" --preemptible \
+              --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
+              --num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
+              --subnetwork "default" --enable-autoupgrade --enable-autorepair \
+              --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
 
-             gcloud --quiet beta container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
+            gcloud --quiet beta container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
 
-             # allows deployment of our docker hub images directly from K8S cluster
-             # must be deleted if you are using gcr.io instead!
-             kubectl delete secret dockerhub-creds || true
-             kubectl create secret docker-registry dockerhub-creds \
-             --docker-server=https://index.docker.io/v1/ \
-             --docker-username=$DOCKER_USERNAME \
-             --docker-password=$DOCKER_PASSWD \
-             --docker-email=$DOCKER_EMAIL
-
-             # Setup SSL certs with cert-bot
-             # apk add -U python2 augeas gcc python2-dev musl-dev libffi-dev openssl-dev py2-pip
-             # cd /root/
-             # wget https://github.com/certbot/certbot/archive/v0.25.1.tar.gz
-             # tar -xzf ./v0.25.1.tar.gz
-             # cd certbot-0.25.1
-             # pip install ./
-             # cd certbot-dns-google
-             # python setup.py install
-             # cd $HOME
-             #
-             # chmod 600 $HOME/gcloud-service-key.json
-             # certbot certonly --email dan@ackerson.de --rsa-key-size 2048 \
-             #   --agree-tos --non-interactive \
-             #   --dns-google --dns-google-propagation-seconds 60 \
-             #   --dns-google-credentials $HOME/gcloud-service-key.json \
-             #   -d "ackerson.de, www.ackerson.de"
-             #
-             # kubectl create secret tls ackerson-de-tls \
-             #   --cert=/etc/letsencrypt/live/ackerson.de/fullchain.pem \
-             #   --key=/etc/letsencrypt/live/ackerson.de/privkey.pem
+            # allows deployment of our docker hub images directly from K8S cluster
+            # must be deleted if you are using gcr.io instead!
+            kubectl delete secret dockerhub-creds || true
+            kubectl create secret docker-registry dockerhub-creds \
+              --docker-server=https://index.docker.io/v1/ \
+              --docker-username=$DOCKER_USERNAME \
+              --docker-password=$DOCKER_PASSWD \
+              --docker-email=$DOCKER_EMAIL
 
       - run:
           name: Setup SSL certificates & Ingress
           command: |
-            kubectl apply -f cert-manager.yaml --validate=false
-            kubectl delete secret dns01-provider-key || true
-            kubectl create secret generic dns01-provider-key --from-file=${HOME}/dns01-provider-key.json
-            kubectl apply -f dns01-provider.yaml
+            # Setup SSL certs with cert-bot
+            apk add -U python2 augeas gcc python2-dev musl-dev libffi-dev openssl-dev py2-pip
+            cd /root/
+            wget https://github.com/certbot/certbot/archive/v0.25.1.tar.gz
+            tar -xzf ./v0.25.1.tar.gz
+            cd certbot-0.25.1
+            pip install ./
+            cd certbot-dns-google
+            python setup.py install
 
-            # Create the ingress
+            cd $HOME
+            certbot certonly --email dan@ackerson.de --rsa-key-size 2048 \
+              --agree-tos --non-interactive \
+              --dns-google --dns-google-propagation-seconds 60 \
+              --dns-google-credentials $HOME/gcloud-service-key.json \
+              -d "ackerson.de, www.ackerson.de"
+
+            kubectl create secret tls ackerson-de-tls \
+              --cert=/etc/letsencrypt/live/ackerson.de/fullchain.pem \
+              --key=/etc/letsencrypt/live/ackerson.de/privkey.pem
+
+            # Create the ingress (depends on TLS key above)
             kubectl apply -f deploy.yaml
+
+      # Maybe cert-manager gets a bit better in the future
+      # - run:
+      #     name: Setup SSL certificates & Ingress
+      #     command: |
+      #       kubectl apply -f cert-manager.yaml --validate=false
+      #       kubectl delete secret dns01-provider-key || true
+      #       kubectl create secret generic dns01-provider-key --from-file=${HOME}/dns01-provider-key.json
+      #       kubectl apply -f dns01-provider.yaml

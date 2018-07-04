@@ -97,6 +97,23 @@ jobs:
             kubectl apply -f ~/gke/deploy.yaml
 
             # TODO: assign the IPV6 to the Load Balancer created by the Ingress
+#           $ gcloud compute forwarding-rules list --format yaml | grep target > targets
+#target: https://www.googleapis.com/compute/v1/projects/kubernetes-207013/global/targetHttpProxies/k8s-tp-default-websites-ssl--607b7c1713d37696
+#target: https://www.googleapis.com/compute/v1/projects/kubernetes-207013/global/targetHttpsProxies/k8s-tps-default-websites-ssl--607b7c1713d37696
+#           $ awk -F"/" '{print $9, $10;}' targets
+#targetHttpProxies k8s-tp-default-websites-ssl--607b7c1713d37696
+#targetHttpsProxies k8s-tps-default-websites-ssl--607b7c1713d37696
+#           $ export HTTP_TARGET_PROXY=
+#           $ export HTTPS_TARGET_PROXY=
+#
+            gcloud compute forwarding-rules create http-ipv6-rule \
+              --ports 80 \
+              --address homepage-ipv6 \
+              --target-pool $HTTP_TARGET_PROXY
+            gcloud compute forwarding-rules create https-ipv6-rule \
+              --ports 443 \
+              --address homepage-ipv6 \
+              --target-pool $HTTPS_TARGET_PROXY
 
       # Maybe cert-manager gets a bit better in the future
       # - run:

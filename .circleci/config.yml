@@ -42,7 +42,7 @@ jobs:
               --docker-email=$DOCKER_EMAIL
 
       - run:
-          name: Setup SSL certificates & Ingress
+          name: Setup SSL certs, IP addresses & Ingress
           command: |
             # Setup SSL certs with cert-bot
             apk add -U python2 augeas gcc python2-dev musl-dev libffi-dev openssl-dev py2-pip
@@ -65,11 +65,32 @@ jobs:
               --cert=/etc/letsencrypt/live/ackerson.de/fullchain.pem \
               --key=/etc/letsencrypt/live/ackerson.de/privkey.pem
 
-            # TODO: create 2-4 reserved IP addys (ipv4 & ipv6)
-            # called globalhomepage & globalhomepage-ssl (used in ingress below)
+            # the IPV4 is used to create the Ingress
+            gcloud compute addresses create homepage-ipv4 --global \
+              --ip-version IPV4 || true
+            gcloud compute addresses create homepage-ipv6 --global \
+              --ip-version IPV6 || true
+
+            # update Cloud DNS A & AAAA records according to the new values
+            gcloud dns record-sets transaction start -z=ackersonde
+            gcloud dns record-sets transaction remove -z=ackersonde \
+              --name="ackerson.de." \
+              --type=A \
+              --ttl=300 #TODO -> find out current entry :(
+            gcloud dns record-sets transaction add -z=ackersonde \
+              --name="ackerson.de." \
+              --type=A \
+              --ttl=300 `gcloud compute addresses describe homepage-ipv4 --global --format json | jq '.address?' -r`
+            gcloud dns record-sets transaction add -z=ackersonde \
+              --name="ackerson.de." \
+              --type=AAAA \
+              --ttl=300 "{IPV6}"
+            gcloud dns record-sets transaction execute -z=ackersonde
 
             # Create the ingress (depends on TLS key above)
             kubectl apply -f ~/gke/deploy.yaml
+
+            # TODO: assign the IPV6 to the Load Balancer created by the Ingress
 
       # Maybe cert-manager gets a bit better in the future
       # - run:

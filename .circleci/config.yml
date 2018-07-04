@@ -12,7 +12,7 @@ jobs:
             echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
             chmod 600 $HOME/gcloud-service-key.json
             #echo $GCLOUD_DNS01_SERVICE_KEY > ${HOME}/dns01-provider-key.json
-            export=$(pwd)
+
       - run:
           name: Setup Cluster and Ingress
           command: |
@@ -68,23 +68,29 @@ jobs:
             # the IPV4 is used to create the Ingress
             gcloud compute addresses create homepage-ipv4 --global \
               --ip-version IPV4 || true
-            gcloud compute addresses create homepage-ipv6 --global \
-              --ip-version IPV6 || true
+            # Leave ipv6 out for now
+            #gcloud compute addresses create homepage-ipv6 --global \
+            #  --ip-version IPV6 || true
 
             # update Cloud DNS A & AAAA records according to the new values
             gcloud dns record-sets transaction start -z=ackersonde
             gcloud dns record-sets transaction remove -z=ackersonde \
               --name="ackerson.de." \
               --type=A \
-              --ttl=300 #TODO -> find out current entry :(
+              --ttl=300 `gcloud dns record-sets list -z=ackersonde --format json | jq '.[] | select(.name == "ackerson.de.") + select(.type == "A") | .rrdatas[0]?' -r`
             gcloud dns record-sets transaction add -z=ackersonde \
               --name="ackerson.de." \
               --type=A \
               --ttl=300 `gcloud compute addresses describe homepage-ipv4 --global --format json | jq '.address?' -r`
-            gcloud dns record-sets transaction add -z=ackersonde \
-              --name="ackerson.de." \
-              --type=AAAA \
-              --ttl=300 "{IPV6}"
+            # Leave ipv6 out for now
+            # gcloud dns record-sets transaction remove -z=ackersonde \
+            #   --name="ackerson.de." \
+            #   --type=AAAA \
+            #   --ttl=300 `gcloud dns record-sets list -z=ackersonde --format json | jq '.[] | select(.name == "ackerson.de.") + select(.type == "AAAA") | .rrdatas[0]?' -r`
+            # gcloud dns record-sets transaction add -z=ackersonde \
+            #   --name="ackerson.de." \
+            #   --type=AAAA \
+            #   --ttl=300 `gcloud compute addresses describe homepage-ipv6 --global --format json | jq '.address?' -r`
             gcloud dns record-sets transaction execute -z=ackersonde
 
             # Create the ingress (depends on TLS key above)

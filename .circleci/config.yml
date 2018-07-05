@@ -59,7 +59,7 @@ jobs:
               --agree-tos --non-interactive \
               --dns-google --dns-google-propagation-seconds 70 \
               --dns-google-credentials $HOME/gcloud-service-key.json \
-              -d "ackerson.de, www.ackerson.de, battlefleet.online"
+              -d "ackerson.de"
 
             kubectl create secret tls ackerson-de-tls \
               --cert=/etc/letsencrypt/live/ackerson.de/fullchain.pem \

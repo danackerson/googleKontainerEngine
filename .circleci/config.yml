@@ -68,9 +68,8 @@ jobs:
             # the IPV4 is used to create the Ingress
             gcloud compute addresses create homepage-ipv4 --global \
               --ip-version IPV4 || true
-            # Leave ipv6 out for now
-            #gcloud compute addresses create homepage-ipv6 --global \
-            #  --ip-version IPV6 || true
+            gcloud compute addresses create homepage-ipv6 --global \
+              --ip-version IPV6 || true
 
             # update Cloud DNS A & AAAA records according to the new values
             gcloud dns record-sets transaction start -z=ackersonde
@@ -82,38 +81,39 @@ jobs:
               --name="ackerson.de." \
               --type=A \
               --ttl=300 `gcloud compute addresses describe homepage-ipv4 --global --format json | jq '.address?' -r`
-            # Leave ipv6 out for now
-            # gcloud dns record-sets transaction remove -z=ackersonde \
-            #   --name="ackerson.de." \
-            #   --type=AAAA \
-            #   --ttl=300 `gcloud dns record-sets list -z=ackersonde --format json | jq '.[] | select(.name == "ackerson.de.") + select(.type == "AAAA") | .rrdatas[0]?' -r`
-            # gcloud dns record-sets transaction add -z=ackersonde \
-            #   --name="ackerson.de." \
-            #   --type=AAAA \
-            #   --ttl=300 `gcloud compute addresses describe homepage-ipv6 --global --format json | jq '.address?' -r`
+            gcloud dns record-sets transaction remove -z=ackersonde \
+              --name="ackerson.de." \
+              --type=AAAA \
+              --ttl=300 `gcloud dns record-sets list -z=ackersonde --format json | jq '.[] | select(.name == "ackerson.de.") + select(.type == "AAAA") | .rrdatas[0]?' -r`
+            gcloud dns record-sets transaction add -z=ackersonde \
+              --name="ackerson.de." \
+              --type=AAAA \
+              --ttl=300 `gcloud compute addresses describe homepage-ipv6 --global --format json | jq '.address?' -r`
             gcloud dns record-sets transaction execute -z=ackersonde
 
             # Create the ingress (depends on TLS key above)
             kubectl apply -f ~/gke/deploy.yaml
 
-            # TODO: assign the IPV6 to the Load Balancer created by the Ingress
-#           $ gcloud compute forwarding-rules list --format yaml | grep target > targets
-#target: https://www.googleapis.com/compute/v1/projects/kubernetes-207013/global/targetHttpProxies/k8s-tp-default-websites-ssl--607b7c1713d37696
-#target: https://www.googleapis.com/compute/v1/projects/kubernetes-207013/global/targetHttpsProxies/k8s-tps-default-websites-ssl--607b7c1713d37696
-#           $ awk -F"/" '{print $9, $10;}' targets
-#targetHttpProxies k8s-tp-default-websites-ssl--607b7c1713d37696
-#targetHttpsProxies k8s-tps-default-websites-ssl--607b7c1713d37696
-#           $ export HTTP_TARGET_PROXY=
-#           $ export HTTPS_TARGET_PROXY=
-#
+            # sleep here while waiting for the Ingress to come up?
+            sleep 30
+
+            # assign the IPV6 to the Load Balancer created by the Ingress
+            export HTTP_TARGET_PROXY=`gcloud compute forwarding-rules list --format yaml | grep targetHttpProxies --line-buffered | awk -F"/" '{print $10}'`
+            export HTTPS_TARGET_PROXY=`gcloud compute forwarding-rules list --format yaml | grep targetHttpsProxies --line-buffered | awk -F"/" '{print $10}'`
             gcloud compute forwarding-rules create http-ipv6-rule \
               --ports 80 \
               --address homepage-ipv6 \
-              --target-pool $HTTP_TARGET_PROXY
+              --target-http-proxy $HTTP_TARGET_PROXY \
+              --global
             gcloud compute forwarding-rules create https-ipv6-rule \
               --ports 443 \
               --address homepage-ipv6 \
-              --target-pool $HTTPS_TARGET_PROXY
+              --target-https-proxy $HTTPS_TARGET_PROXY \
+              --global
+            # NOTE: as we manually attach the ipv6 address to the load balancer,
+            # the LB will no longer be cleaned up automatically when cluster is deleted!
+            # additionally, all reserved static IPs must be manually deleted!
+            # if you fail to clean these up, you'll pay min. $18/month for nothing!!!
 
       # Maybe cert-manager gets a bit better in the future
       # - run:

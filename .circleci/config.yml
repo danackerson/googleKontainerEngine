@@ -98,9 +98,10 @@ jobs:
             sleep 30
 
             # assign the IPV6 to the Load Balancer created by the Ingress
-            export HTTP_TARGET_PROXY=`gcloud compute forwarding-rules list --format yaml | grep targetHttpProxies --line-buffered | awk -F"/" '{print $10}'`
-            export HTTPS_TARGET_PROXY=`gcloud compute forwarding-rules list --format yaml | grep targetHttpsProxies --line-buffered | awk -F"/" '{print $10}'`
-            gcloud compute forwarding-rules create http-ipv6-rule \
+            gcloud compute forwarding-rules list --format yaml > targets
+            export HTTP_TARGET_PROXY=`cat targets | grep targetHttpProxies | awk -F"/" '{print $10}'`
+            export HTTPS_TARGET_PROXY=`cat targets | grep targetHttpsProxies | awk -F"/" '{print $10}'`
+            gcloud compute forwarding-rules create http-ipv6-rule \vi t
               --ports 80 \
               --address homepage-ipv6 \
               --target-http-proxy $HTTP_TARGET_PROXY \

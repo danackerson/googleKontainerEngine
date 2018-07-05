@@ -66,6 +66,8 @@ jobs:
               --key=/etc/letsencrypt/live/ackerson.de/privkey.pem
 
             # the IPV4 is used to create the Ingress
+            gcloud compute addresses delete homepage-ipv4 --global --quiet || true
+            gcloud compute addresses delete homepage-ipv6 --global --quiet || true
             gcloud compute addresses create homepage-ipv4 --global \
               --ip-version IPV4 || true
             gcloud compute addresses create homepage-ipv6 --global \
@@ -101,7 +103,7 @@ jobs:
             gcloud compute forwarding-rules list --format yaml > targets
             export HTTP_TARGET_PROXY=`cat targets | grep targetHttpProxies | awk -F"/" '{print $10}'`
             export HTTPS_TARGET_PROXY=`cat targets | grep targetHttpsProxies | awk -F"/" '{print $10}'`
-            gcloud compute forwarding-rules create http-ipv6-rule \vi t
+            gcloud compute forwarding-rules create http-ipv6-rule \
               --ports 80 \
               --address homepage-ipv6 \
               --target-http-proxy $HTTP_TARGET_PROXY \

@@ -11,7 +11,6 @@ jobs:
           command: |
             echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
             chmod 600 $HOME/gcloud-service-key.json
-            #echo $GCLOUD_DNS01_SERVICE_KEY > ${HOME}/dns01-provider-key.json
 
       - run:
           name: Setup Cluster and Ingress
@@ -23,7 +22,7 @@ jobs:
 
             gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
               --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
-              --cluster-version "1.10.5-gke.0" --machine-type "f1-micro" \
+              --cluster-version "$KUBERNETES_ENGINE_VERSION" --machine-type "f1-micro" \
               --image-type "COS" --disk-type "pd-standard" --preemptible \
               --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
               --num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
@@ -32,97 +31,106 @@ jobs:
 
             gcloud --quiet beta container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
 
-            # allows deployment of our docker hub images directly from K8S cluster
-            # must be deleted if you are using gcr.io instead!
-            kubectl delete secret dockerhub-creds || true
-            kubectl create secret docker-registry dockerhub-creds \
-              --docker-server=https://index.docker.io/v1/ \
-              --docker-username=$DOCKER_USERNAME \
-              --docker-password=$DOCKER_PASSWD \
-              --docker-email=$DOCKER_EMAIL
+            if "$DOCKER_USERNAME"; then
+              kubectl delete secret dockerhub-creds || true
+              kubectl create secret docker-registry dockerhub-creds \
+                --docker-server=https://index.docker.io/v1/ \
+                --docker-username=$DOCKER_USERNAME \
+                --docker-password=$DOCKER_PASSWD \
+                --docker-email=$DOCKER_EMAIL
+            fi
 
       - run:
           name: Setup SSL certs, IP addresses & Ingress
           command: |
-            # Setup SSL certs with cert-bot
-            apk add -U python2 augeas gcc python2-dev musl-dev libffi-dev openssl-dev py2-pip jq
-            cd /root/
-            wget https://github.com/certbot/certbot/archive/v0.25.1.tar.gz
-            tar -xzf ./v0.25.1.tar.gz
-            cd certbot-0.25.1
-            pip install ./
-            cd certbot-dns-google
-            python setup.py install
+            if "$SSL_ENABLED"; then
+              # Setup SSL certs with cert-bot
+              apk add -U python2 augeas gcc python2-dev musl-dev libffi-dev openssl-dev py2-pip jq
+              cd /root/
+              wget https://github.com/certbot/certbot/archive/v0.25.1.tar.gz
+              tar -xzf ./v0.25.1.tar.gz
+              cd certbot-0.25.1
+              pip install ./
+              cd certbot-dns-google
+              python setup.py install
 
-            cd $HOME
-            certbot certonly --email dan@ackerson.de --rsa-key-size 2048 \
-              --agree-tos --non-interactive \
-              --dns-google --dns-google-propagation-seconds 70 \
-              --dns-google-credentials $HOME/gcloud-service-key.json \
-              -d "ackerson.de"
+              if [ -z "$CERTBOT_CSV_ALL_DOMAINS" ]; then
+                export CERTBOT_CSV_ALL_DOMAINS=$PRIMARY_DOMAIN
+              fi
+              certbot certonly --email $CERTBOT_EMAIL --rsa-key-size 2048 \
+                --agree-tos --non-interactive \
+                --dns-google --dns-google-propagation-seconds 70 \
+                --dns-google-credentials $HOME/gcloud-service-key.json \
+                -d "$CERTBOT_CSV_ALL_DOMAINS"
 
-            kubectl create secret tls ackerson-de-tls \
-              --cert=/etc/letsencrypt/live/ackerson.de/fullchain.pem \
-              --key=/etc/letsencrypt/live/ackerson.de/privkey.pem
+              export TLS_SECRET=${PRIMARY_DOMAIN/./-}
+              kubectl create secret tls $TLS_SECRET-tls \
+                --cert=/etc/letsencrypt/live/$PRIMARY_DOMAIN/fullchain.pem \
+                --key=/etc/letsencrypt/live/$PRIMARY_DOMAIN/privkey.pem
+            fi
 
-            # the IPV4 is used to create the Ingress
+            # IPV4 is used to create the Ingress
             gcloud compute addresses delete homepage-ipv4 --global --quiet || true
-            gcloud compute addresses delete homepage-ipv6 --global --quiet || true
             gcloud compute addresses create homepage-ipv4 --global \
               --ip-version IPV4 || true
-            gcloud compute addresses create homepage-ipv6 --global \
-              --ip-version IPV6 || true
 
-            # update Cloud DNS A & AAAA records according to the new values
-            gcloud dns record-sets transaction start -z=ackersonde
-            gcloud dns record-sets transaction remove -z=ackersonde \
-              --name="ackerson.de." \
+            if "$IPV6_ENABLED"; then
+              gcloud compute addresses delete homepage-ipv6 --global --quiet || true
+              gcloud compute addresses create homepage-ipv6 --global \
+                --ip-version IPV6 || true
+            fi
+
+            export GCLOUD_DNS_ZONE_NAME=${PRIMARY_DOMAIN//.}
+            # update Cloud DNS A / AAAA records according to the new values
+            gcloud dns record-sets transaction start -z=$GCLOUD_DNS_ZONE_NAME
+            gcloud dns record-sets transaction remove -z=$GCLOUD_DNS_ZONE_NAME \
+              --name="$PRIMARY_DOMAIN." \
               --type=A \
-              --ttl=300 `gcloud dns record-sets list -z=ackersonde --format json | jq '.[] | select(.name == "ackerson.de.") + select(.type == "A") | .rrdatas[0]?' -r`
-            gcloud dns record-sets transaction add -z=ackersonde \
-              --name="ackerson.de." \
+              --ttl=300 `gcloud dns record-sets list -z=$GCLOUD_DNS_ZONE_NAME --format json | jq '.[] | select(.name == "$PRIMARY_DOMAIN.") + select(.type == "A") | .rrdatas[0]?' -r`
+            gcloud dns record-sets transaction add -z=$GCLOUD_DNS_ZONE_NAME \
+              --name="$PRIMARY_DOMAIN." \
               --type=A \
               --ttl=300 `gcloud compute addresses describe homepage-ipv4 --global --format json | jq '.address?' -r`
-            gcloud dns record-sets transaction remove -z=ackersonde \
-              --name="ackerson.de." \
-              --type=AAAA \
-              --ttl=300 `gcloud dns record-sets list -z=ackersonde --format json | jq '.[] | select(.name == "ackerson.de.") + select(.type == "AAAA") | .rrdatas[0]?' -r`
-            gcloud dns record-sets transaction add -z=ackersonde \
-              --name="ackerson.de." \
-              --type=AAAA \
-              --ttl=300 `gcloud compute addresses describe homepage-ipv6 --global --format json | jq '.address?' -r`
-            gcloud dns record-sets transaction execute -z=ackersonde
+            if "$IPV6_ENABLED"; then
+              gcloud dns record-sets transaction remove -z=$GCLOUD_DNS_ZONE_NAME \
+                --name="$PRIMARY_DOMAIN." \
+                --type=AAAA \
+                --ttl=300 `gcloud dns record-sets list -z=$GCLOUD_DNS_ZONE_NAME --format json | jq '.[] | select(.name == "$PRIMARY_DOMAIN.") + select(.type == "AAAA") | .rrdatas[0]?' -r`
+              gcloud dns record-sets transaction add -z=$GCLOUD_DNS_ZONE_NAME \
+                --name="$PRIMARY_DOMAIN." \
+                --type=AAAA \
+                --ttl=300 `gcloud compute addresses describe homepage-ipv6 --global --format json | jq '.address?' -r`
+            fi
+            gcloud dns record-sets transaction execute -z=$GCLOUD_DNS_ZONE_NAME
 
-            # Create the ingress (depends on TLS key above)
+            if [ -z "$SSL_ENABLED" ]; then
+              sed -i '/tls:$/,$d' ~/gke/deploy.yaml
+            else
+              sed -i -e "s@{{TLS_SECRET}}@$TLS_SECRET@" ~/gke/deploy.yaml
+            fi
+            sed -i -e "s@{{PRIMARY_DOMAIN}}@$PRIMARY_DOMAIN@" ~/gke/deploy.yaml
+            # Create the K8S Ingress
             kubectl apply -f ~/gke/deploy.yaml
 
             # sleep here while waiting for the Ingress to come up?
             sleep 30
 
-            # assign the IPV6 to the Load Balancer created by the Ingress
-            gcloud compute forwarding-rules list --format yaml > targets
-            export HTTP_TARGET_PROXY=`cat targets | grep targetHttpProxies | awk -F"/" '{print $10}'`
-            export HTTPS_TARGET_PROXY=`cat targets | grep targetHttpsProxies | awk -F"/" '{print $10}'`
-            gcloud compute forwarding-rules create http-ipv6-rule \
-              --ports 80 \
-              --address homepage-ipv6 \
-              --target-http-proxy $HTTP_TARGET_PROXY \
-              --global
-            gcloud compute forwarding-rules create https-ipv6-rule \
-              --ports 443 \
-              --address homepage-ipv6 \
-              --target-https-proxy $HTTPS_TARGET_PROXY \
-              --global
-            # NOTE: as we manually attach the ipv6 address to the load balancer,
-            # the LB will no longer be cleaned up automatically when cluster is deleted!
-            # additionally, all reserved static IPs must be manually deleted!
-            # if you fail to clean these up, you'll pay min. $18/month for nothing!!!
+            if "$IPV6_ENABLED"; then
+              # assign the IPV6 to the Load Balancer created by the Ingress
+              gcloud compute forwarding-rules list --format yaml > targets
+              export HTTP_TARGET_PROXY=`cat targets | grep targetHttpProxies | awk -F"/" '{print $10}'`
+              gcloud compute forwarding-rules create http-ipv6-rule \
+                --ports 80 \
+                --address homepage-ipv6 \
+                --target-http-proxy $HTTP_TARGET_PROXY \
+                --global
 
-      # Maybe cert-manager gets a bit better in the future
-      # - run:
-      #     name: Setup SSL certificates & Ingress
-      #     command: |
-      #       kubectl apply -f ~/gke/cert-manager.yaml --validate=false
-      #       kubectl delete secret dns01-provider-key || true
-      #       kubectl create secret generic dns01-provider-key --from-file=${HOME}/dns01-provider-key.json
-      #       kubectl apply -f ~/gke/dns01-provider.yaml
+              if "$SSL_ENABLED"; then
+                export HTTPS_TARGET_PROXY=`cat targets | grep targetHttpsProxies | awk -F"/" '{print $10}'`
+                gcloud compute forwarding-rules create https-ipv6-rule \
+                  --ports 443 \
+                  --address homepage-ipv6 \
+                  --target-https-proxy $HTTPS_TARGET_PROXY \
+                  --global
+              fi
+            fi

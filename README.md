@@ -16,6 +16,7 @@ By adding the appropriate ENV VARS to your CircleCI build, you can enable SSL & 
 The following env vars are required unless marked as *optional*.
 
 *SSL_ENABLED* if not present, http:// only
+
 *IPV6_ENABLED* if not present, IPV4 only
 
 KUBERNETES_ENGINE_VERSION (e.g. [1.10.5-gke.0](https://cloud.google.com/kubernetes-engine/versioning-and-upgrades#versions_available_for_new_cluster_masters) )
@@ -24,19 +25,26 @@ PRIMARY_DOMAIN (e.g. ackerson.de)
 **NOTE:** This deployment assumes you have a Google Cloud DNS Zone named `${PRIMARY_DOMAIN//.}` (e.g. `ackersonde`)
 
 *CERTBOT_EMAIL* (e.g. dan@ackerson.de)
+
 *CERTBOT_CSV_ALL_DOMAINS* (e.g. ackerson.de, www.ackerson.de)
  - if you specify SSL but omit this env var, $PRIMARY_DOMAIN is used to gen the cert
 
 For setting up Docker Registry Credentials as a K8S Secret:
 *DOCKER_USERNAME*
+
 *DOCKER_PASSWD*
+
 *DOCKER_EMAIL*
 
 For launching & managing the cluster, follow this [CircleCI guide](https://circleci.com/docs/2.0/google-auth/) adding:
 GCLOUD_SERVICE_KEY
+
 GOOGLE_APPLICATION_CREDENTIALS
+
 GOOGLE_CLUSTER_NAME
+
 GOOGLE_COMPUTE_ZONE
+
 GOOGLE_PROJECT_ID
 
 # Pointing the Ingress to your services & applications

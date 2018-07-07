@@ -1,6 +1,6 @@
 # Launch your very own Kubernetes Cluster on GCP
-This repo launches the cheapest possible (~$9/month http + IPv4 only) K8S cluster in the Google Cloud Platform in region us-east1 with standard disks and preemptible (killed w/i 24hrs) f1-micro instances.
-By adding the appropriate ENV VARS to your CircleCI build, you can enable SSL & IPv6 (but each one of these doubles the cost of the cluster due to number of forwarding rules on the global load balancer!!!).
+This repo launches the cheapest possible (~$9/month http + IPv4 only) K8S cluster in the Google Cloud Platform in region us-east1 with standard disks and preemptible (killed w/i 24hrs), f1-micro instances.
+By adding the appropriate ENV VARS to your CircleCI build, you can enable SSL & IPv6 (but each one of these doubles the cost of the cluster due to number of forwarding rules on the global load balancer).
 
 # Prerequisites
 - [Service Account in GCP](#create-a-service-account)

@@ -31,7 +31,7 @@ jobs:
 
             gcloud --quiet beta container clusters get-credentials ${GOOGLE_CLUSTER_NAME}
 
-            if "$DOCKER_USERNAME"; then
+            if [[ ! -z $DOCKER_USERNAME ]]; then
               kubectl delete secret dockerhub-creds || true
               kubectl create secret docker-registry dockerhub-creds \
                 --docker-server=https://index.docker.io/v1/ \

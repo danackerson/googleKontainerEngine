@@ -21,11 +21,11 @@ jobs:
             gcloud --quiet components install kubectl beta
 
             gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
-              --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --disk-size "10" \
+              --region ${GOOGLE_COMPUTE_ZONE} --username "admin" \
               --cluster-version "$KUBERNETES_ENGINE_VERSION" --machine-type "f1-micro" \
               --image-type "COS" --disk-type "pd-standard" --preemptible \
               --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
-              --num-nodes "1" --enable-stackdriver-kubernetes --network "default" \
+              --num-nodes "1" --network "default" --disk-size "10" \
               --subnetwork "default" --enable-autoupgrade --enable-autorepair \
               --addons HorizontalPodAutoscaling,HttpLoadBalancing,KubernetesDashboard
 

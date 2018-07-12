@@ -41,7 +41,7 @@ jobs:
             fi
 
       - run:
-          name: Setup SSL certs, IP addresses & Ingress
+          name: Setup networking incl. SSL certs, IP addresses & Ingress
           command: |
             if "$SSL_ENABLED"; then
               # Setup SSL certs with cert-bot
@@ -134,3 +134,12 @@ jobs:
                   --global
               fi
             fi
+
+      - run:
+          name: Deploy apps
+          command: |
+            curl --user ${CIRCLE_API_TOKEN}: --data build_parameters[CIRCLE_JOB]=deploy \
+              "https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/ackerson.de-go/tree/k8s"
+
+            curl --user ${CIRCLE_API_TOKEN}: --data build_parameters[CIRCLE_JOB]=deploy \
+              "https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/bender-slackbot/tree/k8s"

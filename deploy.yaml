@@ -12,7 +12,14 @@ spec:
       - backend:
           serviceName: homepage-deploy-service
           servicePort: 80
+  - host: battlefleet.online
+    http:
+      paths:
+      - backend:
+          serviceName: battlefleet-deploy-service
+          servicePort: 80
   tls:
     - secretName: {{TLS_SECRET}}-tls
       hosts:
         - {{PRIMARY_DOMAIN}}
+        - battlefleet.online

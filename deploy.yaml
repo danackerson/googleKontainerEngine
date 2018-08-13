@@ -19,7 +19,7 @@ spec:
           serviceName: battlefleet-deploy-service
           servicePort: 80
   tls:
-    - secretName: {{TLS_SECRET}}-tls
-      hosts:
-        - {{PRIMARY_DOMAIN}}
-        - battlefleet.online
+  - secretName: {{TLS_SECRET}}-tls
+    hosts:
+      - {{PRIMARY_DOMAIN}}
+      - battlefleet.online

@@ -47,9 +47,9 @@ jobs:
               # Setup SSL certs with cert-bot
               apk add -U python2 augeas gcc python2-dev musl-dev libffi-dev openssl-dev py2-pip jq
               cd /root/
-              wget https://github.com/certbot/certbot/archive/v0.25.1.tar.gz
-              tar -xzf ./v0.25.1.tar.gz
-              cd certbot-0.25.1
+              wget https://github.com/certbot/certbot/archive/v0.27.1.tar.gz
+              tar -xzf ./v0.27.1.tar.gz
+              cd certbot-0.27.1
               pip install ./
               cd certbot-dns-google
               python setup.py install

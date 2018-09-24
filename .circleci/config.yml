@@ -135,6 +135,7 @@ jobs:
               fi
             fi
 
+      # Nice idea - but as of 1.10.7-gke.2, the Ingress creation (deploy.yaml) stalls waiting for these 2 services :(
       - run:
           name: Deploy apps
           command: |

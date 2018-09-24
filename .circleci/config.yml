@@ -23,7 +23,7 @@ jobs:
             gcloud --quiet beta container clusters create ${GOOGLE_CLUSTER_NAME} \
               --region ${GOOGLE_COMPUTE_ZONE} --username "admin" --enable-stackdriver-kubernetes \
               --cluster-version "$KUBERNETES_ENGINE_VERSION" --machine-type "f1-micro" \
-              --image-type "COS" --disk-type "pd-standard" --preemptible \
+              --image-type "COS" --disk-type "pd-standard" \
               --service-account "circleci@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
               --num-nodes "1" --network "default" --disk-size "10" \
               --subnetwork "default" --enable-autoupgrade --enable-autorepair \
